@@ -1,5 +1,6 @@
 name: Build Android APK
 
+# Manual build trigger after enabling GitHub Actions (no functional change)
 on:
   push:
     branches:
