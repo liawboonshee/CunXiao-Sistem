@@ -1,93 +1,56 @@
-   # AI Voice Assistant（语音版 ChatGPT）
+# 存销系统 · 免费语音版
 
-**客户验收请读 [CUSTOMER_GUIDE.md](CUSTOMER_GUIDE.md)**（云端模式：装 APK 即用，无需开电脑）。  
-**维护方部署请读 [DEPLOY.md](DEPLOY.md)**（Worker + GitHub Secrets 闭环）。
+`inventory-v1` 分支的 Android APK 已改为免费语音记账。
 
-默认 Proxy 方案：**Cloudflare Worker 云端 HTTPS**（`worker/`）。  
-APK 构建时预置 `VITE_API_BASE_URL`；本地 Node（`server/`）仅作开发调试。
+## 免费原理
 
-APK 下载：GitHub **Actions** → 最新 run → **Artifacts** → `app-debug`。
+- 语音转文字：Android 手机语音识别（`@capacitor-community/speech-recognition`）
+- 指令理解：APK 内置本地规则解析
+- 回答播报：Android 手机文字转语音
+- 库存、客户、欠款与交易记录：保存在本机
 
----
+APK 运行时不调用 OpenAI、AI Platform、Cloudflare Worker 或 `/api/chat`，不需要 API Key、Proxy Token 或 Worker 地址。
 
-Android 语音助手：语音输入、ChatGPT 多轮对话、语音播报、自动循环、**对话本地自动保存**。  
-技术栈 Vite + React + Capacitor + Cloudflare Worker Proxy。
+> 注：部分 Android 手机自带的语音识别需要网络，但不会使用仓库拥有者的 AI 额度。
 
-OpenAI Key 只写在 Worker Secret 或 `server/.env`，不进前端、不进 GitHub。
+## 可说的指令
 
-## 目录
+- `进货10克，成本60`
+- `卖给阿明5克，收300`
+- `卖给阿明1克，总价10，欠5`
+- `现在库存多少`
+- `今天收入多少`
+- `今天利润多少`
+- `阿明欠款多少`
+- `最近一笔交易`
 
-- `client/` — 前端与 Android 工程
-- `server/` — 本地调试 Proxy（`/health`、`/api/chat`）
-- `worker/` — **生产默认** Cloudflare Worker Proxy
+支持中文数字、小数、公斤/克/毫克，重量最小 `0.01g`。
 
-## 云端部署（生产）
+## GitHub 自动生成 APK
 
-```powershell
-npm install -g wrangler
-cd worker
-wrangler login
-wrangler secret put OPENAI_API_KEY
-wrangler deploy
-```
+1. 打开仓库的 **Actions**。
+2. 选择 **Build Android APK**。
+3. 点 **Run workflow**，分支选 `inventory-v1`。
+4. 完成后在 **Artifacts** 下载 `CunXiao-Free-Voice-v1.3`。
 
-在 GitHub Repo → Settings → Secrets 配置：
+构建不再需要设置任何 AI 密钥。
 
-- `VITE_API_BASE_URL` = `https://xxx.workers.dev`
-- `VITE_PROXY_TOKEN`（可选，与 `PROXY_AUTH_TOKEN` 一致）
+## 本地构建
 
-push 到 `main` 后 Actions 自动构建带云端地址的 APK。
-
-## 本地调试（可选）
-
-```powershell
-cd server
-npm install
-copy .env.example .env
-# 编辑 .env 填入 OPENAI_API_KEY
-npm start
-```
-
-```powershell
+```bash
 cd client
-npm install
-# client/.env 设 VITE_API_BASE_URL=http://localhost:3001
-npm run dev
-```
-
-## 构建 APK
-
-```powershell
-cd client
-npm install
+npm ci
+npm run verify:free
 npm run build
 npx cap sync android
 cd android
-.\gradlew.bat assembleDebug
+./gradlew assembleDebug
 ```
 
-产物：`client/android/app/build/outputs/apk/debug/app-debug.apk`
+APK 输出：`client/android/app/build/outputs/apk/debug/app-debug.apk`
 
-## 客户使用（云端模式）
+## 数据与更新
 
-1. 安装 APK（已内置 Worker 地址）
-2. 授予麦克风权限
-3. 开「自动对话」→ 点麦克风（WiFi 或 4G，**无需开电脑**）
-4. 对话自动保存在本机，关 App 再开记录仍在
+应用包名仍为 `com.chatgpt.voice.pro`，用来延续旧版的本机库存资料。此版版本号为 `1.3-free-voice`（`versionCode 4`）。
 
-## 核心功能
-
-- 语音输入（Web + Android 原生识别）
-- ChatGPT 多轮记忆 + **本地自动保存**
-- 语音播报与自动循环
-- Android APK，云端 Proxy
-
-## 安全
-
-- API Key 仅 Worker Secret 或 `server/.env`
-- 可选 `PROXY_AUTH_TOKEN` + `X-Proxy-Token` 门禁
-- 前端只调 `/api/chat`，不直连 OpenAI
-
-## 不包含
-
-用户登录、云端对话同步、唤醒词
+`worker/`、`server/` 和 `AI语音助手-交付包/` 是旧版云端助手的保留资料，当前免费语音 APK 不会引用它们。

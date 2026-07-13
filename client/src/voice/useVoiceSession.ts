@@ -4,9 +4,10 @@ import { combineAbortSignals, createTimeoutSignal, isTimeoutAbort } from '../uti
 import { getVoiceAdapter } from './voiceAdapter'
 import type { VoicePhase } from './types'
 
-const RESTART_DELAY_MS = 300
+const RESULT_RESTART_DELAY_MS = 100
+const ERROR_RESTART_DELAY_MS = 500
 const MAX_EMPTY_RECOGNITIONS = 3
-const API_TIMEOUT_MS = 60_000
+const COMMAND_TIMEOUT_MS = 60_000
 
 interface State {
   phase: VoicePhase
@@ -88,7 +89,7 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
   const resumeAfterSpeaking = async () => {
     dispatch({ type: 'SET_PHASE', phase: 'idle' })
     if (autoVoiceRef.current && sessionActiveRef.current) {
-      await delay(RESTART_DELAY_MS)
+      await delay(RESULT_RESTART_DELAY_MS)
       if (sessionActiveRef.current) await startListeningInternalRef.current()
     }
   }
@@ -135,7 +136,7 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
               return
             }
             if (autoVoiceRef.current && isTurnActive(turnId)) {
-              await delay(RESTART_DELAY_MS)
+              await delay(RESULT_RESTART_DELAY_MS)
               if (isTurnActive(turnId)) await startListeningInternal()
             } else {
               dispatch({ type: 'SET_PHASE', phase: 'idle' })
@@ -145,13 +146,6 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
 
           emptyRecognitionCountRef.current = 0
 
-          if (!autoVoiceRef.current) {
-            sessionActiveRef.current = false
-            await adapterRef.current.stop()
-            dispatch({ type: 'SET_PHASE', phase: 'idle' })
-            return
-          }
-
           await adapterRef.current.stop()
           if (!isTurnActive(turnId)) return
 
@@ -160,7 +154,7 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
           abortControllerRef.current?.abort()
           abortControllerRef.current = new AbortController()
           const userSignal = abortControllerRef.current.signal
-          const { signal: timeoutSignal, clear: clearTimeoutTimer } = createTimeoutSignal(API_TIMEOUT_MS)
+          const { signal: timeoutSignal, clear: clearTimeoutTimer } = createTimeoutSignal(COMMAND_TIMEOUT_MS)
           const signal = combineAbortSignals([userSignal, timeoutSignal])
 
           try {
@@ -190,10 +184,10 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
             }
             const message =
               isTimeoutAbort(signal) || isTimeoutAbort(userSignal)
-                ? '请求超时，请重试'
+                ? '处理超时，请重试'
                 : err instanceof Error
                   ? err.message
-                  : '语音对话失败，请重试'
+                  : '语音指令失败，请重试'
             dispatch({ type: 'SET_ERROR', message })
             sessionActiveRef.current = false
           }
@@ -201,7 +195,19 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
       },
       onError: (message) => {
         dispatch({ type: 'SET_ERROR', message })
-        sessionActiveRef.current = false
+        if (
+          !autoVoiceRef.current ||
+          /权限被拒绝|不支持|不可用|已取消/.test(message)
+        ) {
+          sessionActiveRef.current = false
+          return
+        }
+
+        const turnId = turnIdRef.current
+        void (async () => {
+          await delay(ERROR_RESTART_DELAY_MS)
+          if (isTurnActive(turnId)) await startListeningInternalRef.current()
+        })()
       },
     })
   }, [])
@@ -245,7 +251,7 @@ export function useVoiceSession({ onSend, onInputPreview }: Options) {
 
     if (!sessionActiveRef.current || !autoVoiceRef.current) return
 
-    await delay(RESTART_DELAY_MS)
+    await delay(RESULT_RESTART_DELAY_MS)
     if (sessionActiveRef.current) await startListeningInternal()
   }, [startListeningInternal])
 

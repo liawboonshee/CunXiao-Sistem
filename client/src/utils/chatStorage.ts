@@ -1,9 +1,9 @@
 import { Capacitor } from '@capacitor/core'
 import { Preferences } from '@capacitor/preferences'
-import type { ChatMessage } from '../ai/openai'
+import type { ChatMessage } from '../types/chat'
 import { trimMessages } from './trimMessages'
 
-const STORAGE_KEY = 'voice_ai_messages'
+const STORAGE_KEY = 'free_inventory_voice_messages'
 
 function isChatMessage(value: unknown): value is ChatMessage {
   if (!value || typeof value !== 'object') return false

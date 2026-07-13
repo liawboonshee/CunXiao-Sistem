@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ChatGPT Voice AI Pro</string>
-    <string name="title_activity_main">ChatGPT Voice AI Pro</string>
+    <string name="app_name">存销系统</string>
+    <string name="title_activity_main">存销系统</string>
     <string name="package_name">com.chatgpt.voice.pro</string>
     <string name="custom_url_scheme">com.chatgpt.voice.pro</string>
 </resources>

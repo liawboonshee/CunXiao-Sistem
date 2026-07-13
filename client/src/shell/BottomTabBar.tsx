@@ -10,7 +10,7 @@ interface Props {
 const tabs = [
   {
     key: 'voice' as TabKey,
-    label: 'AI语音助手',
+    label: '免费语音',
     icon: '🎙️',
   },
   {

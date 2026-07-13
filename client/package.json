@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "build:apk": "node scripts/verify-build-env.mjs && npm run cap:sync",
+    "build": "tsc --noEmit && vite build && npm run verify:bundle",
+    "verify:free": "node scripts/verify-free-build.mjs",
+    "verify:bundle": "node scripts/verify-free-build.mjs --dist",
+    "build:apk": "npm run verify:free && npm run cap:sync",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android"
